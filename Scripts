@@ -1,0 +1,76 @@
+-- Limpar tabelas
+TRUNCATE TABLE vendas;
+TRUNCATE TABLE funcionarios_especiais;
+TRUNCATE TABLE clientes_especiais;
+
+-- Vender
+CALL Venda(1, 1, 1, 1, 'Recife', 50.00);        -- Correios (Recife)
+CALL Venda(2, 2, 1, 2, 'São Paulo', 100.00);    -- Loggi (São Paulo)
+CALL Venda(3, 3, 2, 2, 'São Paulo', 50.00);     -- Loggi (São Paulo)
+CALL Venda(4, 4, 3, 3, 'Rio de Janeiro', 80.00); -- FedEx (RJ)
+
+
+-- Funções
+
+-- CALCULAR A IDADE DO CLIENTE
+SELECT Calcula_Idade(2) AS idade_cliente_1;
+
+-- Calcular fretes
+SELECT Soma_Fretes('Rio de Janeiro') AS total_fretes_para_recife;
+
+-- quanto o vendedor vendeu no dia
+SELECT Arrecadado(CURDATE(), 1) AS Total_Vendedor_1_Hoje;
+SELECT Arrecadado(CURDATE(), 2) AS Total_Vendedor_2_Hoje;
+SELECT Arrecadado(CURDATE(), 3) AS Total_Vendedor_3_Hoje;
+
+
+-- Triggers
+SELECT * FROM funcionarios_especiais;
+
+-- ver os clientes especiais
+SELECT * FROM clientes_especiais;
+
+-- ver quanto cada um tem
+SELECT * FROM clientes_especiais WHERE id_cliente = 2;
+
+-- Sorteio
+CALL Sorteio();
+
+-- Aumento salarial
+CALL Reajuste(30, 'CEO');
+
+-- Ver os aumentos
+SELECT v.id, v.nome, c.nome AS cargo, v.salario
+FROM vendedores v
+JOIN cargos c ON v.id_cargo = c.id;
+
+-- Estatisticas
+CALL Estatisticas();
+
+-- Vendendo produtos
+CALL Venda(1, 1, 1, 1, 'Recife', 2500.00);
+CALL Venda(2, 2, 1, 1, 'Olinda', 1500.00);
+CALL Venda(3, 1, 1, 1, 'Recife', 2500.00);
+CALL Venda(4, 3, 2, 2, 'Paulista', 800.00);
+CALL Venda(5, 1, 3, 3, 'Jaboatão', 2500.00);
+CALL Venda(6, 3, 2, 2, 'Olinda', 800.00);
+
+-- Vendas detalhadas
+SELECT * FROM vw_vendas_detalhadas;
+
+-- Vendas bonus
+SELECT * FROM vw_vendedores_bonus;
+
+-- Vendas de todos os meses somados
+SELECT * FROM vw_vendas_mensais;
+
+
+
+
+
+
+
+
+
+
+
