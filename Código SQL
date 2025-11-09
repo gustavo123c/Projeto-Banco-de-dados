@@ -1,4 +1,4 @@
-DROP DATABASE IF EXISTS ecommerce;
+DROP DATABASE ecommerce;
 CREATE DATABASE ecommerce;
 USE ecommerce;
 
@@ -214,9 +214,10 @@ INSERT INTO produtos (nome, descricao, quantidade_estoque, valor, id_vendedor) V
 ('Tablet Gráfico', 'Tablet desenho', 15, 700.00, 5);
 
 INSERT INTO transportadoras (nome, cidade) VALUES
-('Transporte Rápido', 'São Paulo'),
-('Entregas Seguras', 'Rio de Janeiro'),
-('Logística Express', 'Belo Horizonte');
+('Correios', 'Recife'),
+('Loggi', 'São Paulo'),
+('FedEx', 'Rio de Janeiro');
+
 
 -- FUNÇÕES -------------------------------------------------------
 
@@ -242,19 +243,28 @@ BEGIN
 END$$
 
 
+DELIMITER $$
+
 CREATE FUNCTION Soma_Fretes(p_destino VARCHAR(255))
 RETURNS DECIMAL(10,2)
 DETERMINISTIC
+READS SQL DATA
 BEGIN
     DECLARE v_total DECIMAL(10,2);
 
-    SELECT COALESCE(SUM(valor_frete), 0) INTO v_total
-    FROM vendas
-    WHERE endereco_destino = p_destino;
+    SELECT SUM(v.valor_frete) INTO v_total
+    FROM vendas v
+    JOIN transportadoras t ON v.id_transportadora = t.id
+    WHERE t.cidade = p_destino;
+
+    IF v_total IS NULL THEN
+        SET v_total = 0;
+    END IF;
 
     RETURN v_total;
 END$$
 
+DELIMITER $$
 
 CREATE FUNCTION Arrecadado(p_data DATE, p_vendedor INT)
 RETURNS DECIMAL(10,2)
@@ -265,10 +275,13 @@ BEGIN
     SELECT COALESCE(SUM(valor_total), 0) INTO v_total
     FROM vendas
     WHERE DATE(data_venda) = p_data
-    AND id_vendedor = p_vendedor;
+      AND id_vendedor = p_vendedor;
 
     RETURN v_total;
 END$$
+
+DELIMITER ;
+
 
 DELIMITER ;
 
@@ -276,75 +289,171 @@ DELIMITER ;
 
 DELIMITER $$
 
-CREATE TRIGGER trg_vendedor_especial AFTER INSERT ON vendas
+DELIMITER $$
+
+CREATE TRIGGER trg_vendedor_especial
+AFTER INSERT ON vendas
 FOR EACH ROW
 BEGIN
     DECLARE total_vendas DECIMAL(10,2);
-    SELECT SUM(valor_total) INTO total_vendas FROM vendas WHERE id_vendedor = NEW.id_vendedor;
+
+    SELECT COALESCE(SUM(valor_total),0) INTO total_vendas
+    FROM vendas
+    WHERE id_vendedor = NEW.id_vendedor;
+
     IF total_vendas > 1000 THEN
-        INSERT INTO funcionarios_especiais VALUES (NEW.id_vendedor, total_vendas*0.05)
-        ON DUPLICATE KEY UPDATE bonus = total_vendas*0.05;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Vendedor virou especial e bonus foi recalculado';
-    END IF;
-END$$
-
-CREATE TRIGGER trg_cliente_especial AFTER INSERT ON vendas
-FOR EACH ROW
-BEGIN
-    DECLARE total_cliente DECIMAL(10,2);
-    SELECT SUM(valor_total) INTO total_cliente FROM vendas WHERE id_cliente = NEW.id_cliente;
-    IF total_cliente > 500 THEN
-        INSERT INTO clientes_especiais VALUES (NEW.id_cliente, total_cliente*0.02)
-        ON DUPLICATE KEY UPDATE cashback = total_cliente*0.02;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Cliente virou especial e cashback foi recalculado';
-    END IF;
-END$$
-
-CREATE TRIGGER trg_remove_cliente_especial BEFORE UPDATE ON clientes_especiais
-FOR EACH ROW
-BEGIN
-    IF NEW.cashback <= 0 THEN
-        DELETE FROM clientes_especiais WHERE id_cliente = OLD.id_cliente;
+        INSERT INTO funcionarios_especiais (id_vendedor, bonus)
+        VALUES (NEW.id_vendedor, total_vendas * 0.05)
+        ON DUPLICATE KEY UPDATE bonus = total_vendas * 0.05;
     END IF;
 END$$
 
 DELIMITER ;
 
+DELIMITER $$
+
+
+CREATE TRIGGER trg_cliente_especial
+AFTER INSERT ON vendas
+FOR EACH ROW
+BEGIN
+    DECLARE total_cliente DECIMAL(10,2);
+
+    SELECT COALESCE(SUM(valor_total),0) INTO total_cliente
+    FROM vendas
+    WHERE id_cliente = NEW.id_cliente;
+
+    IF total_cliente > 500 THEN
+        INSERT INTO clientes_especiais (id_cliente, cashback)
+        VALUES (NEW.id_cliente, total_cliente * 0.02)
+        ON DUPLICATE KEY UPDATE cashback = total_cliente * 0.02;
+    END IF;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_remove_cliente_especial
+AFTER UPDATE ON clientes_especiais
+FOR EACH ROW
+BEGIN
+    IF NEW.cashback <= 0 THEN
+        DELETE FROM clientes_especiais WHERE id_cliente = NEW.id_cliente;
+    END IF;
+END$$
+
+DELIMITER ;
 -- PROCEDURES ----------------------------------------------------
 
 DELIMITER $$
 
-CREATE PROCEDURE Venda(p_id_cliente INT, p_id_produto INT, p_id_vendedor INT, p_id_transportadora INT, p_destino VARCHAR(255))
+CREATE PROCEDURE Venda(
+    p_id_cliente INT, 
+    p_id_produto INT, 
+    p_id_vendedor INT, 
+    p_id_transportadora INT,
+    p_destino VARCHAR(255),
+    p_valor_produto DECIMAL(10,2)
+)
 BEGIN
-    DECLARE v_valor_produto DECIMAL(10,2);
-    SET v_valor_produto=(SELECT valor FROM produtos WHERE id=p_id_produto);
-    INSERT INTO vendas VALUES (NULL,p_id_cliente,p_id_produto,p_id_vendedor,p_id_transportadora,NOW(),p_destino,15.00,v_valor_produto+15.00);
-    UPDATE produtos SET quantidade_estoque=quantidade_estoque-1 WHERE id=p_id_produto;
+    INSERT INTO vendas (id_cliente, id_produto, id_vendedor, id_transportadora, 
+                        data_venda, endereco_destino, valor_frete, valor_total)
+    VALUES (p_id_cliente, p_id_produto, p_id_vendedor, p_id_transportadora,
+            NOW(), p_destino, 15.00, p_valor_produto + 15.00);
 END$$
+
 
 CREATE PROCEDURE Sorteio()
 BEGIN
-    SELECT CONCAT('Cliente sorteado -> ', id, ' | Valor do prêmio = ', IF(id IN (SELECT id_cliente FROM clientes_especiais),200,100)) AS Resultado
-    FROM clientes ORDER BY RAND() LIMIT 1;
+    SELECT CONCAT('Cliente sorteado -> ', id, ' | Valor do prêmio = ',
+            IF(id IN (SELECT id_cliente FROM clientes_especiais), 200, 100)) 
+           AS Resultado
+    FROM clientes 
+    ORDER BY RAND() 
+    LIMIT 1;
 END$$
 
-CREATE PROCEDURE Reajuste(p_percentual DECIMAL(5,2), p_cargo VARCHAR(50))
+
+CREATE PROCEDURE Reajuste(
+    p_percentual DECIMAL(5,2), 
+    p_cargo VARCHAR(50)
+)
 BEGIN
-    UPDATE vendedores v JOIN cargos c ON v.id_cargo=c.id
-    SET v.salario = v.salario + (v.salario*p_percentual/100)
+    UPDATE vendedores v 
+    JOIN cargos c ON v.id_cargo = c.id
+    SET v.salario = v.salario + (v.salario * p_percentual / 100)
     WHERE c.nome = p_cargo;
 END$$
 
+
+DELIMITER $$
+
 CREATE PROCEDURE Estatisticas()
 BEGIN
-    SELECT p.nome AS ProdutoMaisVendido, COUNT(v.id_produto) AS Vendas, SUM(v.valor_total) AS Total
-    FROM vendas v JOIN produtos p ON v.id_produto=p.id GROUP BY p.id ORDER BY Vendas DESC LIMIT 1;
+    -- Produto mais vendido
+    SELECT p.nome AS ProdutoMaisVendido,
+           COUNT(v.id_produto) AS TotalVendas,
+           SUM(v.valor_total) AS TotalArrecadado
+    FROM vendas v 
+    JOIN produtos p ON v.id_produto = p.id 
+    GROUP BY p.id 
+    ORDER BY TotalVendas DESC 
+    LIMIT 1;
 
-    SELECT p.nome AS ProdutoMenosVendido, COUNT(v.id_produto) AS Vendas, SUM(v.valor_total) AS Total
-    FROM vendas v JOIN produtos p ON v.id_produto=p.id GROUP BY p.id ORDER BY Vendas ASC LIMIT 1;
+    -- Vendedor associado ao produto mais vendido
+    SELECT vd.nome AS VendedorAssociado
+    FROM vendas v
+    JOIN produtos p ON v.id_produto = p.id
+    JOIN vendedores vd ON v.id_vendedor = vd.id
+    GROUP BY vd.nome
+    ORDER BY COUNT(v.id_produto) DESC
+    LIMIT 1;
+
+    -- Mês de maior e menor vendas do produto mais vendido
+    SELECT MONTH(v.data_venda) AS MesMaiorVenda
+    FROM vendas v
+    JOIN produtos p ON v.id_produto = p.id
+    GROUP BY MesMaiorVenda
+    ORDER BY COUNT(*) DESC
+    LIMIT 1;
+
+    SELECT MONTH(v.data_venda) AS MesMenorVenda
+    FROM vendas v
+    JOIN produtos p ON v.id_produto = p.id
+    GROUP BY MesMenorVenda
+    ORDER BY COUNT(*) ASC
+    LIMIT 1;
+
+    -- Produto menos vendido
+    SELECT p.nome AS ProdutoMenosVendido,
+           COUNT(v.id_produto) AS TotalVendas,
+           SUM(v.valor_total) AS TotalArrecadado
+    FROM vendas v 
+    JOIN produtos p ON v.id_produto = p.id 
+    GROUP BY p.id 
+    ORDER BY TotalVendas ASC 
+    LIMIT 1;
+
+    -- Mês de maior e menor vendas do produto menos vendido
+    SELECT MONTH(v.data_venda) AS MesMaiorVenda
+    FROM vendas v
+    JOIN produtos p ON v.id_produto = p.id
+    GROUP BY MesMaiorVenda
+    ORDER BY COUNT(*) DESC
+    LIMIT 1;
+
+    SELECT MONTH(v.data_venda) AS MesMenorVenda
+    FROM vendas v
+    JOIN produtos p ON v.id_produto = p.id
+    GROUP BY MesMenorVenda
+    ORDER BY COUNT(*) ASC
+    LIMIT 1;
+
 END$$
 
 DELIMITER ;
+
 
 -- VIEWS ---------------------------------------------------------
 
@@ -371,3 +480,9 @@ GRANT SELECT, UPDATE, DELETE ON ecommerce.* TO 'gerente'@'localhost';
 GRANT INSERT, SELECT ON ecommerce.vendas TO 'funcionario'@'localhost';
 
 FLUSH PRIVILEGES;
+
+
+SELECT CURRENT_USER();
+
+
+
