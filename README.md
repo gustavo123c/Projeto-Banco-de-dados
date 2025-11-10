@@ -1,7 +1,12 @@
+
 📊 Sistema E-commerce 
+
+
 
 📋 Descrição do Projeto
 Sistema completo de e-commerce desenvolvido para a disciplina de Banco de Dados, implementando conceitos avançados de SQL, programação procedural e integração com aplicação Python.
+
+
 
 🏗️ Arquitetura do Sistema
 Banco de Dados (MySQL)
@@ -17,6 +22,8 @@ Backend: MySQL com stored procedures, functions, triggers e views
 Interface: Python com mysql.connector
 
 Funcionalidades: CRUD completo, relatórios, estatísticas e gestão de usuários
+
+
 
 🗃️ Estrutura do Banco de Dados
 Tabelas Principais
@@ -37,6 +44,8 @@ cargos	Hierarquia	id, nome, salario_base
 
 funcionarios_especiais	Vendedores destaque	id_vendedor, bonus
 
+
+
 ⚙️ Funcionalidades Implementadas
 
 
@@ -46,6 +55,8 @@ Soma_Fretes(p_destino VARCHAR) → Soma fretes por cidade destino
 
 Arrecadado(p_data DATE, p_vendedor INT) → Total arrecadado por vendedor/dia
 
+
+
 🔔 Triggers (SQL)
 
 trg_vendedor_especial → Promove vendedor para "especial" ao atingir R$ 1000+ em vendas (5% bonus)
@@ -53,6 +64,8 @@ trg_vendedor_especial → Promove vendedor para "especial" ao atingir R$ 1000+ e
 trg_cliente_especial → Promove cliente para "especial" ao gastar R$ 500+ (2% cashback)
 
 trg_remove_cliente_especial → Remove cliente especial quando cashback zera
+
+
 
 🔄 Stored Procedures (SQL)
 
@@ -64,6 +77,8 @@ Reajuste() → Aplica reajuste salarial por cargo
 
 Estatisticas() → Gera relatório completo de vendas
 
+
+
 👁️ Views (SQL)
 
 vw_vendas_detalhadas → JOIN completo de vendas com clientes, produtos e vendedores
@@ -71,6 +86,8 @@ vw_vendas_detalhadas → JOIN completo de vendas com clientes, produtos e vended
 vw_vendedores_bonus → Vendedores com seus respectivos bônus
 
 vw_vendas_mensais → Agrupamento mensal de vendas totais
+
+
 
 👤 Sistema de Usuários
 
@@ -80,6 +97,8 @@ admin@localhost	Todas as permissões	admin123
 gerente@localhost	SELECT, UPDATE, DELETE	gerente123
 
 funcionario@localhost	INSERT, SELECT em vendas	func123
+
+
 
 🐍 Aplicação Python
 Menu Principal
@@ -97,6 +116,8 @@ text
 11. Listar clientes especiais
 12. Listar funcionários especiais
 0. Sair
+
+
 
 🎯 Destaques Técnicos
 Constraints Implementadas
@@ -119,3 +140,9 @@ Programa de bônus para vendedores
 Hierarquia de cargos e salários
 
 Logística com múltiplas transportadoras
+
+Grupo:
+Gustavo Cavalcanti de Melo Costa
+Arthur couto Lira
+Pedro Henrique Lima
+Caio de Araujo Bandeira Leite
