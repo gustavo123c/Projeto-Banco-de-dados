@@ -477,7 +477,7 @@ CREATE USER IF NOT EXISTS 'funcionario'@'localhost' IDENTIFIED BY 'func123';
 
 GRANT ALL PRIVILEGES ON ecommerce.* TO 'admin'@'localhost';
 GRANT SELECT, UPDATE, DELETE ON ecommerce.* TO 'gerente'@'localhost';
-GRANT INSERT, SELECT ON ecommerce.vendas TO 'funcionario'@'localhost';
+GRANT SELECT, INSERT ON ecommerce.vendas TO 'funcionario'@'localhost';
 
 FLUSH PRIVILEGES;
 
