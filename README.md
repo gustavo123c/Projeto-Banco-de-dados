@@ -146,3 +146,4 @@ Gustavo Cavalcanti de Melo Costa
 Arthur couto Lira
 Pedro Henrique Lima
 Caio de Araujo Bandeira Leite
+Pedro Henrique Bezerra
